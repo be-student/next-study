@@ -1,6 +1,12 @@
 
+o
+java:S3776 "RRefactor this method to reduce its Cognitive Complexity from 19 to the 15 allowed.(“–ış8•ì«–È1
 N
-java:S1135#"2Complete the task associated to this TODO comment.(¨‡â8­Œ¡•È1
+java:S1135%"2Complete the task associated to this TODO comment.(¨‡â8–ì«–È1
 V
-java:S4719$"9Replace charset name argument with StandardCharsets.UTF_8(Íÿ‡ã8°Œ¡•È1
-L	java:S1064"+Replace this use of System.out by a logger.(³‹ò£ûÿÿÿÿ8´Œ¡•È1
+java:S4719&"9Replace charset name argument with StandardCharsets.UTF_8(Íÿ‡ã8–ì«–È1
+L	java:S106P"+Replace this use of System.out by a logger.(³‹ò£ûÿÿÿÿ8’˜®–È1
+L
+java:S1481["*Remove this unused "query" local variable.(ÏÿÆÓÿÿÿÿÿ8û¼½–È1
+ã
+java:S6541 "ÅA "Brain Method" was detected. Refactor it to reduce at least one of the following metrics: LOC from 73 to 64, Complexity from 16 to 14, Nesting Level from 4 to 2, Number of Variables from 33 to 6.(“–ış8ì«–È1

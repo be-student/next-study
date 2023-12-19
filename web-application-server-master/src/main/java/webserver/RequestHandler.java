@@ -3,6 +3,7 @@ package webserver;
 import model.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import util.IOUtils;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
@@ -14,6 +15,7 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.nio.file.Files;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -38,14 +40,40 @@ public class RequestHandler extends Thread {
             // 클라이언트의 request정보
             String url = "";
             String line = null;
+            String method = null;
+            Map<String, String> headers = new HashMap<>();
             while ((line = br.readLine()) != null && !"".equals(line)) {
                 log.info("info log의 line : {}", line);
                 String[] tokens = line.split(" ");
                 if ("GET".equals(tokens[0])) {
                     url = tokens[1];
-                    break;
+                    method = tokens[0];
+                }
+                if ("POST".equals(tokens[0])) {
+                    url = tokens[1];
+                    method = tokens[0];
+                }
+                if (tokens[0].contains(":")) {
+                    String key = tokens[0].split(":")[0];
+                    String value = tokens[1].trim();
+                    headers.put(key, value);
                 }
             }
+            log.info("method : {}", method);
+            Map<String, String> requestBody = new HashMap<>();
+            if ("POST".equals(method)) {
+                String contentLength = headers.get("Content-Length");
+                String contentType = headers.get("Content-Type");
+                if (contentLength != null && contentType != null && "application/x-www-form-urlencoded".equals(contentType)) {
+                    String body = IOUtils.readData(br, Integer.parseInt(contentLength));
+                    log.info("body : {}", body);
+                    String[] tokens = body.split("&");
+                    requestBody = Arrays.stream(tokens).map(token -> token.split("="))
+                            .collect(Collectors.toMap(token -> token[0], token -> token[1]));
+                    log.info("requestBody : {}", requestBody);
+                }
+            }
+
             File file = new File("./web-application-server-master/webapp" + url);
             if (file.exists() && file.isFile()) {
                 byte[] body = Files.readAllBytes(file.toPath());
@@ -56,14 +84,19 @@ public class RequestHandler extends Thread {
                 return;
             }
             int index = url.indexOf("?");
-            String requestPath = url.substring(0, index);
-            String params = url.substring(index + 1);
-            String[] tokens = params.split("&");
-            Map<String, String> query = Arrays.stream(tokens).map(token -> token.split("="))
-                    .collect(Collectors.toMap(token -> token[0], token -> token[1]));
-            if (requestPath.equals("/user/create")) {
-                User user = new User(query.get("userId"), query.get("password"), query.get("name"),
-                        query.get("email"));
+            String requestPath = url;
+            if (index != -1) {
+                requestPath = url.substring(0, index);
+            }
+            Map<String, String> query = new HashMap<>();
+            if (index != -1) {
+                String params = url.substring(index + 1);
+                String[] tokens = params.split("&");
+                query = Arrays.stream(tokens).map(token -> token.split("="))
+                        .collect(Collectors.toMap(token -> token[0], token -> token[1]));
+            }
+            if (requestPath.equals("/user/create") && method.equals("POST")) {
+                User user = new User(requestBody.get("userId"), requestBody.get("password"), requestBody.get("name"), requestBody.get("email"));
                 log.info("user : {}", user);
             }
             byte[] body = "Hello World".getBytes();
