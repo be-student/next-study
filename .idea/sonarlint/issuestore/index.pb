@@ -11,3 +11,9 @@ t
 Dweb-application-server-master/src/main/java/webserver/WebServer.java,0/d/0d723ddc1a3d7e588da5d13b861b7b846e87320e
 X
 (web-application-server-master/.gitignore,5/1/51d532a252d5d426199f8bdd502cf38abbb7a7be
+W
+'web-application-server-master/README.md,b/d/bd262358a5b1c8f2a84e56c0b3fb34162517c544
+y
+Iweb-application-server-master/src/main/java/webserver/RequestHandler.java,9/f/9fc62c6911daa79eab60ece0db5dcafc860fce7a
+_
+/web-application-server-master/webapp/index.html,a/e/aeb458b75308695a9e99ef94a170b7b8c7bc3247
