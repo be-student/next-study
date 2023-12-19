@@ -73,7 +73,7 @@ public class RequestHandler extends Thread {
 
             }
 
-            File file = new File("./web-application-server-master/webapp" + url);
+            File file = new File("./webapp" + url);
             DataOutputStream dos = new DataOutputStream(out);
             if (file.exists() && file.isFile()) {
                 if (url.endsWith(".css")) {
