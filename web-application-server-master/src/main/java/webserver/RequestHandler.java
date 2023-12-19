@@ -1,5 +1,6 @@
 package webserver;
 
+import db.DataBase;
 import model.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -98,7 +99,21 @@ public class RequestHandler extends Thread {
             if (requestPath.equals("/user/create") && method.equals("POST")) {
                 User user = new User(requestBody.get("userId"), requestBody.get("password"), requestBody.get("name"), requestBody.get("email"));
                 log.info("user : {}", user);
+                DataBase.addUser(user);
                 response302Header(new DataOutputStream(out), 0, "/web-application-server-master/index.html");
+                return;
+            }
+            if (requestPath.equals("/user/login") && method.equals("POST")) {
+                User user = DataBase.findUserById(requestBody.get("userId"));
+                if (user == null) {
+                    response302Header(new DataOutputStream(out), 0, "/user/login_failed.html");
+                    return;
+                }
+                if (user.getPassword().equals(requestBody.get("password"))) {
+                    response302Header(new DataOutputStream(out), 0, "/index.html");
+                    return;
+                }
+                response302Header(new DataOutputStream(out), 0, "/user/login_failed.html");
                 return;
             }
             byte[] body = "Hello World".getBytes();

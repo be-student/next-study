@@ -19,3 +19,5 @@ _
 /web-application-server-master/webapp/index.html,a/e/aeb458b75308695a9e99ef94a170b7b8c7bc3247
 c
 3web-application-server-master/webapp/user/form.html,e/b/ebe262ac789f1c8796439f2d9948c39a4ff240fd
+k
+;web-application-server-master/webapp/user/login_failed.html,a/b/ab0f591dd9ab8239df88526c485863901d1ff4f7
