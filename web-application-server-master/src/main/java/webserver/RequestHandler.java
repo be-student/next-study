@@ -16,6 +16,7 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.nio.file.Files;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -62,26 +63,30 @@ public class RequestHandler extends Thread {
             }
             log.info("method : {}", method);
             Map<String, String> requestBody = new HashMap<>();
-            if ("POST".equals(method)) {
-                String contentLength = headers.get("Content-Length");
-                String contentType = headers.get("Content-Type");
-                if (contentLength != null && contentType != null && "application/x-www-form-urlencoded".equals(contentType)) {
-                    String body = IOUtils.readData(br, Integer.parseInt(contentLength));
-                    log.info("body : {}", body);
-                    String[] tokens = body.split("&");
-                    requestBody = Arrays.stream(tokens).map(token -> token.split("="))
-                            .collect(Collectors.toMap(token -> token[0], token -> token[1]));
-                    log.info("requestBody : {}", requestBody);
-                }
+            if (headers.get("Content-Length") != null && headers.get("Content-Type") != null && "application/x-www-form-urlencoded".equals(headers.get("Content-Type"))) {
+                String body = IOUtils.readData(br, Integer.parseInt(headers.get("Content-Length")));
+                log.info("body : {}", body);
+                String[] tokens = body.split("&");
+                requestBody = Arrays.stream(tokens).map(token -> token.split("="))
+                        .collect(Collectors.toMap(token -> token[0], token -> token[1]));
+                log.info("requestBody : {}", requestBody);
+
             }
 
             File file = new File("./web-application-server-master/webapp" + url);
+            DataOutputStream dos = new DataOutputStream(out);
             if (file.exists() && file.isFile()) {
+                if (url.endsWith(".css")) {
+                    byte[] body = Files.readAllBytes(file.toPath());
+                    response200CssHeader(dos, body.length);
+                    responseBody(dos, body);
+                    end(dos);
+                    return;
+                }
                 byte[] body = Files.readAllBytes(file.toPath());
-                System.out.println(body.length);
-                DataOutputStream dos = new DataOutputStream(out);
                 response200Header(dos, body.length);
                 responseBody(dos, body);
+                end(dos);
                 return;
             }
             int index = url.indexOf("?");
@@ -100,26 +105,53 @@ public class RequestHandler extends Thread {
                 User user = new User(requestBody.get("userId"), requestBody.get("password"), requestBody.get("name"), requestBody.get("email"));
                 log.info("user : {}", user);
                 DataBase.addUser(user);
-                response302Header(new DataOutputStream(out), 0, "/web-application-server-master/index.html");
+                response302Header(dos, 0, "/index.html");
+                end(dos);
                 return;
             }
             if (requestPath.equals("/user/login") && method.equals("POST")) {
                 User user = DataBase.findUserById(requestBody.get("userId"));
                 if (user == null) {
-                    response302Header(new DataOutputStream(out), 0, "/user/login_failed.html");
+                    response302Header(dos, 0, "/user/login_failed.html");
+                    responseCookie(dos, "logined=false");
+                    end(dos);
                     return;
                 }
                 if (user.getPassword().equals(requestBody.get("password"))) {
-                    response302Header(new DataOutputStream(out), 0, "/index.html");
+                    response302Header(dos, 0, "/index.html");
+                    responseCookie(dos, "logined=true");
+                    end(dos);
                     return;
                 }
-                response302Header(new DataOutputStream(out), 0, "/user/login_failed.html");
+                response302Header(dos, 0, "/user/login_failed.html");
+                responseCookie(dos, "logined=false");
                 return;
+            } else if (requestPath.equals("/user/list")) {
+                if (headers.get("Cookie") == null || !headers.get("Cookie").contains("logined=true")) {
+                    response302Header(dos, 0, "/user/login.html");
+                    end(dos);
+                    return;
+                }
+                Collection<User> users = DataBase.findAll();
+                StringBuilder sb = new StringBuilder();
+                users.forEach(user -> sb.append(user.toString()).append("\n"));
+                byte[] body = sb.toString().getBytes();
+                response200Header(dos, body.length);
+                responseBody(dos, body);
+                end(dos);
             }
             byte[] body = "Hello World".getBytes();
-            DataOutputStream dos = new DataOutputStream(out);
             response200Header(dos, body.length);
             responseBody(dos, body);
+            end(dos);
+        } catch (IOException e) {
+            log.error(e.getMessage());
+        }
+    }
+
+    private void responseCookie(DataOutputStream dos, String s) {
+        try {
+            dos.writeBytes("Set-Cookie: " + s + " \r\n");
         } catch (IOException e) {
             log.error(e.getMessage());
         }
@@ -130,7 +162,16 @@ public class RequestHandler extends Thread {
             dos.writeBytes("HTTP/1.1 200 OK \r\n");
             dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
             dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
-            dos.writeBytes("\r\n");
+        } catch (IOException e) {
+            log.error(e.getMessage());
+        }
+    }
+
+    private void response200CssHeader(DataOutputStream dos, int lengthOfBodyContent) {
+        try {
+            dos.writeBytes("HTTP/1.1 200 OK \r\n");
+            dos.writeBytes("Content-Type: text/css\r\n");
+            dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
         } catch (IOException e) {
             log.error(e.getMessage());
         }
@@ -142,7 +183,6 @@ public class RequestHandler extends Thread {
             dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
             dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
             dos.writeBytes("Location: " + redirectUrl + "\r\n");
-            dos.writeBytes("\r\n");
         } catch (IOException e) {
             log.error(e.getMessage());
         }
@@ -151,6 +191,15 @@ public class RequestHandler extends Thread {
     private void responseBody(DataOutputStream dos, byte[] body) {
         try {
             dos.write(body, 0, body.length);
+            dos.flush();
+        } catch (IOException e) {
+            log.error(e.getMessage());
+        }
+    }
+
+    private void end(DataOutputStream dos) {
+        try {
+            dos.writeBytes("\r\n");
             dos.flush();
         } catch (IOException e) {
             log.error(e.getMessage());
