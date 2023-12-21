@@ -3,6 +3,7 @@
  */
 
 plugins {
+    kotlin("jvm") version "1.9.21"
     `java-library`
 }
 
@@ -15,6 +16,7 @@ dependencies {
     implementation(libs.com.google.guava.guava)
     implementation(libs.ch.qos.logback.logback.classic)
     testImplementation(libs.junit.junit)
+    testImplementation(kotlin("test"))
 }
 
 group = "org.nhnnext"
@@ -24,6 +26,13 @@ java.sourceCompatibility = JavaVersion.VERSION_17
 
 tasks.withType<JavaCompile>() {
     options.encoding = "UTF-8"
+}
+
+tasks.test { // See 5️⃣
+    useJUnitPlatform() // JUnitPlatform for tests. See 6️⃣
+}
+kotlin {
+    jvmToolchain(17)
 }
 
 tasks.withType<Javadoc>() {
