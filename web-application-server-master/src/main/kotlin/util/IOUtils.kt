@@ -13,7 +13,6 @@ object IOUtils {
      * @return
      * @throws IOException
      */
-    @Throws(IOException::class)
     fun readData(br: BufferedReader, contentLength: Int): String {
         val body = CharArray(contentLength)
         br.read(body, 0, contentLength)

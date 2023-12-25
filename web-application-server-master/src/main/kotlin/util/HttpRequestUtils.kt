@@ -12,7 +12,7 @@ object HttpRequestUtils {
      * URL에서 ? 이후에 전달되는 field1=value1&field2=value2 형식임
      * @return
      */
-    fun parseQueryString(queryString: String): MutableMap<String, String?>? {
+    fun parseQueryString(queryString: String?): MutableMap<String, String?>? {
         return parseValues(queryString, "&")
     }
 
@@ -25,11 +25,11 @@ object HttpRequestUtils {
         return parseValues(cookies, ";")
     }
 
-    private fun parseValues(values: String, separator: String): MutableMap<String, String?>? {
+    private fun parseValues(values: String?, separator: String): MutableMap<String, String?>? {
         if (Strings.isNullOrEmpty(values)) {
             return Maps.newHashMap()
         }
-        val tokens = values.split(separator.toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
+        val tokens = values?.split(separator.toRegex())?.dropLastWhile { it.isEmpty() }?.toTypedArray()
         return Arrays.stream(tokens).map { t: String ->
             getKeyValue(
                 t,

@@ -10,7 +10,6 @@ object WebServer {
     private const val DEFAULT_PORT = 8080
 
     @Throws(Exception::class)
-    @JvmStatic
     fun main(args: Array<String>) {
         var port = 0
         port = if (args.isEmpty()) {

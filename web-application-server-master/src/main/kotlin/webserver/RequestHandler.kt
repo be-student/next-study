@@ -17,10 +17,6 @@ import java.util.stream.Collectors
 
 class RequestHandler(private val connection: Socket) : Thread() {
     override fun run() {
-        log.debug(
-            "New Client Connect! Connected IP : {}, Port : {}", connection.getInetAddress(),
-            connection.getPort()
-        )
         try {
             connection.getInputStream().use { `in` ->
                 connection.getOutputStream().use { out ->
@@ -39,7 +35,6 @@ class RequestHandler(private val connection: Socket) : Thread() {
                     dos.writeBytes(header)
                     dos.write(body)
                     dos.flush()
-                    log.info("response : {}", response)
                 }
             }
         } catch (e: IOException) {
@@ -54,8 +49,7 @@ class RequestHandler(private val connection: Socket) : Thread() {
         var url = ""
         var line: String?
         var method: String? = null
-        val headers: MutableMap<String, String?> =
-            HashMap()
+        val headers: MutableMap<String, String?> = HashMap()
         while (br.readLine().also { line = it } != null && "" != line) {
             log.info("info log의 line : {}", line)
             val tokens =
@@ -78,8 +72,7 @@ class RequestHandler(private val connection: Socket) : Thread() {
         log.info("method : {}", method)
         var requestBody: Map<String?, String> =
             HashMap()
-        if (headers["Content-Length"] != null && headers["Content-Type"] != null && "application/x-www-form-urlencoded" == headers["Content-Type"]
-        ) {
+        if (headers["Content-Length"] != null && headers["Content-Type"] != null && "application/x-www-form-urlencoded" == headers["Content-Type"]) {
             val body = IOUtils.readData(br, headers["Content-Length"]!!.toInt())
             log.info("body : {}", body)
             val tokens =
