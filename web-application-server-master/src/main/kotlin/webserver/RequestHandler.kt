@@ -3,6 +3,8 @@ package webserver
 import db.DataBase
 import http.code.StatusCode
 import http.cookie.Cookie
+import http.method.HttpMethod
+import http.request.RequestParser
 import http.response.Response
 import model.User
 import org.slf4j.LoggerFactory
@@ -10,17 +12,14 @@ import util.IOUtils
 import java.io.*
 import java.net.Socket
 import java.nio.file.Files
-import java.util.*
 import java.util.function.Consumer
-import java.util.function.Function
-import java.util.stream.Collectors
 
 class RequestHandler(private val connection: Socket) : Thread() {
     override fun run() {
         try {
             connection.getInputStream().use { `in` ->
                 connection.getOutputStream().use { out ->
-                    val response = 저지른_코드(`in`, out)
+                    val response = 저지른_코드(`in`)
 
                     val dos = DataOutputStream(out)
                     val title = "HTTP/1.1 ${response.statusCode.httpCode} OK \r\n"
@@ -42,118 +41,59 @@ class RequestHandler(private val connection: Socket) : Thread() {
         }
     }
 
-    private fun 저지른_코드(`in`: InputStream, out: OutputStream): Response {
+    private fun 저지른_코드(`in`: InputStream): Response {
         val br = BufferedReader(InputStreamReader(`in`, "UTF-8"))
-
+        val requestLines = MutableList(0) { "" }
+        while (true) {
+            val line = br.readLine()
+            if (line == null || line == "") break
+            requestLines.add(line)
+        }
+        if (requestLines.isEmpty()) {
+            return Response.badRequest()
+        }
+        val header = RequestParser.parseHeaders(requestLines.drop(1))
+        val body = IOUtils.readData(br, header["Content-Length"]?.toInt() ?: 0)
+        val request = RequestParser.parseRequest(requestLines, body)
         // 클라이언트의 request정보
-        var url = ""
-        var line: String?
-        var method: String? = null
-        val headers: MutableMap<String, String?> = HashMap()
-        while (br.readLine().also { line = it } != null && "" != line) {
-            log.info("info log의 line : {}", line)
-            val tokens =
-                line!!.split(" ".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
-            if ("GET" == tokens[0]) {
-                url = tokens[1]
-                method = tokens[0]
-            }
-            if ("POST" == tokens[0]) {
-                url = tokens[1]
-                method = tokens[0]
-            }
-            if (tokens[0].contains(":")) {
-                val key =
-                    tokens[0].split(":".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()[0]
-                val value = tokens[1].trim { it <= ' ' }
-                headers[key] = value
-            }
-        }
-        log.info("method : {}", method)
-        var requestBody: Map<String?, String> =
-            HashMap()
-        if (headers["Content-Length"] != null && headers["Content-Type"] != null && "application/x-www-form-urlencoded" == headers["Content-Type"]) {
-            val body = IOUtils.readData(br, headers["Content-Length"]!!.toInt())
-            log.info("body : {}", body)
-            val tokens =
-                body.split("&".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
-            requestBody = Arrays.stream(tokens)
-                .map { token: String ->
-                    token.split("=".toRegex()).dropLastWhile { it.isEmpty() }
-                        .toTypedArray()
-                }
-                .collect(
-                    Collectors.toMap(
-                        { token: Array<String> ->
-                            token[0]
-                        },
-                        { token: Array<String> ->
-                            token[1]
-                        })
-                )
-            log.info("requestBody : {}", requestBody)
-        }
-        val file = File("./webapp$url")
+        log.info("method : {}", request.method)
+        val file = File("./webapp${request.path}")
         if (file.exists() && file.isFile()) {
-            if (url.endsWith(".css")) {
-                val body = Files.readAllBytes(file.toPath())
+            val responseBody = Files.readAllBytes(file.toPath())
+            if (request.path.endsWith(".css")) {
                 val headers = mapOf(
                     "Content-Type" to "text/css",
                 )
-                return Response.ok(body, headers)
+                return Response.ok(responseBody, headers)
             }
-            val body = Files.readAllBytes(file.toPath())
-            val headers = mapOf(
-                "Content-Type" to "text/html;charset=utf-8",
-            )
-            return Response.ok(body, headers)
-        }
-        val index = url.indexOf("?")
-        var requestPath = url
-        if (index != -1) {
-            requestPath = url.substring(0, index)
-        }
-        var query: Map<String?, String?>? =
-            HashMap()
-        if (index != -1) {
-            val params = url.substring(index + 1)
-            val tokens =
-                params.split("&".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
-            query = Arrays.stream(tokens)
-                .map { token: String ->
-                    token.split("=".toRegex()).dropLastWhile { it.isEmpty() }
-                        .toTypedArray()
-                }
-                .collect(
-                    Collectors.toMap(
-                        Function { token: Array<String> ->
-                            token[0]
-                        },
-                        Function { token: Array<String> ->
-                            token[1]
-                        })
+            if (request.path.endsWith(".html")) {
+                val headers = mapOf(
+                    "Content-Type" to "text/html;charset=utf-8",
                 )
+                return Response.ok(responseBody, headers)
+            }
+            throw IllegalStateException("지원하지 않는 파일 형식입니다.")
         }
-        if (requestPath == "/user/create" && method == "POST") {
+        if (request.path == "/user/create" && request.method == HttpMethod.POST) {
             val user = User(
-                requestBody["userId"]!!,
-                requestBody["password"]!!,
-                requestBody["name"]!!,
-                requestBody["email"]!!
+                request.body["userId"]!!,
+                request.body["password"]!!,
+                request.body["name"]!!,
+                request.body["email"]!!
             )
             log.info("user : {}", user)
             DataBase.addUser(user)
             return Response.redirect("/index.html")
         }
-        if (requestPath == "/user/login" && method == "POST") {
-            val user = DataBase.findUserById(requestBody["userId"]!!)
+        if (request.path == "/user/login" && request.method == HttpMethod.POST) {
+            val user = DataBase.findUserById(request.body["userId"]!!)
                 ?: return loginFail()
-            if (user.password == requestBody["password"]) {
+            if (user.password == request.body["password"]) {
                 return Response.redirect("/index.html")
             }
             return loginFail()
-        } else if (requestPath == "/user/list") {
-            if (headers["Cookie"] == null || !headers["Cookie"]!!.contains("logined=true")) {
+        } else if (request.path == "/user/list") {
+            if (request.headers["Cookie"] == null || !request.headers["Cookie"]!!.contains("logined=true")) {
                 return loginFail()
             }
             val users = DataBase.findAll()
@@ -161,8 +101,8 @@ class RequestHandler(private val connection: Socket) : Thread() {
             users.forEach(Consumer { user: User ->
                 sb.append(user.toString()).append("\n")
             })
-            val body = sb.toString()
-            return Response.ok(body)
+            val responseBody = sb.toString()
+            return Response.ok(responseBody)
         }
         return Response.ok("Hello World")
     }
