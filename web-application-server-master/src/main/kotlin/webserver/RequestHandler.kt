@@ -4,6 +4,7 @@ import db.DataBase
 import http.code.StatusCode
 import http.cookie.Cookie
 import http.method.HttpMethod
+import http.request.Request
 import http.request.RequestParser
 import http.response.Response
 import model.User
@@ -19,21 +20,9 @@ class RequestHandler(private val connection: Socket) : Thread() {
         try {
             connection.getInputStream().use { `in` ->
                 connection.getOutputStream().use { out ->
-                    val response = 저지른_코드(`in`)
-
-                    val dos = DataOutputStream(out)
-                    val title = "HTTP/1.1 ${response.statusCode.httpCode} OK \r\n"
-                    val headers = response.headers.map { (key, value) -> "$key: $value\r\n" }
-                    val body = response.body
-                    val contentLength = "Content-Length: ${body.size}\r\n"
-                    val contentType = "Content-Type: text/html;charset=utf-8\r\n"
-                    val cookies =
-                        response.cookies.map { cookie -> "Set-Cookie: ${cookie.name}=${cookie.value}\r\n" }
-                    val cookie = cookies.joinToString("")
-                    val header = title + headers.joinToString("") + contentLength + contentType + cookie + "\r\n"
-                    dos.writeBytes(header)
-                    dos.write(body)
-                    dos.flush()
+                    val request = processRequest(`in`)
+                    val response = if (request == null) Response.badRequest() else 저지른_코드(request)
+                    handleResponse(out, response)
                 }
             }
         } catch (e: IOException) {
@@ -41,20 +30,21 @@ class RequestHandler(private val connection: Socket) : Thread() {
         }
     }
 
-    private fun 저지른_코드(`in`: InputStream): Response {
-        val br = BufferedReader(InputStreamReader(`in`, "UTF-8"))
-        val requestLines = MutableList(0) { "" }
-        while (true) {
-            val line = br.readLine()
-            if (line == null || line == "") break
-            requestLines.add(line)
-        }
-        if (requestLines.isEmpty()) {
-            return Response.badRequest()
-        }
-        val header = RequestParser.parseHeaders(requestLines.drop(1))
-        val body = IOUtils.readData(br, header["Content-Length"]?.toInt() ?: 0)
-        val request = RequestParser.parseRequest(requestLines, body)
+    private fun handleResponse(out: OutputStream?, response: Response) {
+        val dos = DataOutputStream(out)
+        val title = "HTTP/1.1 ${response.statusCode.httpCode} OK \r\n"
+        val headers = response.headers.map { (key, value) -> "$key: $value\r\n" }
+        val body = response.body
+        val contentLength = "Content-Length: ${body.size}\r\n"
+        val cookies = response.cookies.map { cookie -> "Set-Cookie: ${cookie.name}=${cookie.value}\r\n" }
+        val cookie = cookies.joinToString("")
+        val header = title + headers.joinToString("") + contentLength + cookie + "\r\n"
+        dos.writeBytes(header)
+        dos.write(body)
+        dos.flush()
+    }
+
+    private fun 저지른_코드(request: Request): Response {
         // 클라이언트의 request정보
         log.info("method : {}", request.method)
         val file = File("./webapp${request.path}")
@@ -72,7 +62,8 @@ class RequestHandler(private val connection: Socket) : Thread() {
                 )
                 return Response.ok(responseBody, headers)
             }
-            throw IllegalStateException("지원하지 않는 파일 형식입니다.")
+            log.info("fileName : {}", file.name)
+            return Response.ok(responseBody)
         }
         if (request.path == "/user/create" && request.method == HttpMethod.POST) {
             val user = User(
@@ -105,6 +96,22 @@ class RequestHandler(private val connection: Socket) : Thread() {
             return Response.ok(responseBody)
         }
         return Response.ok("Hello World")
+    }
+
+    private fun processRequest(`in`: InputStream): Request? {
+        val br = BufferedReader(InputStreamReader(`in`, "UTF-8"))
+        val requestLines = MutableList(0) { "" }
+        while (true) {
+            val line = br.readLine()
+            if (line == null || line == "") break
+            requestLines.add(line)
+        }
+        if (requestLines.isEmpty()) {
+            return null
+        }
+        val header = RequestParser.parseHeaders(requestLines.drop(1))
+        val body = IOUtils.readData(br, header["Content-Length"]?.toInt() ?: 0)
+        return RequestParser.parseRequest(requestLines, body)
     }
 
     private fun loginFail() = Response(

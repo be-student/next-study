@@ -15,6 +15,10 @@ data class Response(
             return Response(StatusCode.OK, body.toByteArray(), emptyMap(), emptyList())
         }
 
+        fun ok(body: ByteArray): Response {
+            return Response(StatusCode.OK, body, emptyMap(), emptyList())
+        }
+
         fun ok(body: String, headers: Map<String, String>): Response {
             return Response(StatusCode.OK, body.toByteArray(), headers, emptyList())
         }
