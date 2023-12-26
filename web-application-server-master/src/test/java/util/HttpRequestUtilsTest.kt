@@ -1,12 +1,13 @@
 package util
 
+import http.util.HttpRequestUtils
+import http.util.HttpRequestUtils.getKeyValue
+import http.util.HttpRequestUtils.parseCookies
+import http.util.HttpRequestUtils.parseHeader
+import http.util.HttpRequestUtils.parseQueryString
 import org.hamcrest.CoreMatchers
 import org.junit.Assert
 import org.junit.Test
-import util.HttpRequestUtils.getKeyValue
-import util.HttpRequestUtils.parseCookies
-import util.HttpRequestUtils.parseHeader
-import util.HttpRequestUtils.parseQueryString
 
 class HttpRequestUtilsTest {
     @Test

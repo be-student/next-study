@@ -1,4 +1,4 @@
-package model
+package application.model
 
 
 class User(val userId: String, val password: String, private val name: String, private val email: String) {

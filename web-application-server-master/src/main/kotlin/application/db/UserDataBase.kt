@@ -1,10 +1,10 @@
-package db
+package application.db
 
+import application.model.User
 import com.google.common.collect.Maps
-import model.User
 
 
-object DataBase {
+object UserDataBase {
     private val users: MutableMap<String, User> = Maps.newHashMap()
     fun addUser(user: User) {
         users[user.userId] = user
