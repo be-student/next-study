@@ -21,7 +21,19 @@ repositories {
 
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
-    implementation("org.springframework.boot:spring-boot-starter-web")
+    implementation("org.springframework.boot:spring-boot-starter-web") {
+        //default tomcat
+        exclude(group = "org.springframework.boot", module = "spring-boot-starter-tomcat")
+    }
+    //<dependency> <groupId>org.apache.tomcat.embed</groupId> <artifactId>tomcat-embed-jasper</artifactId> <scope>provided</scope> </dependency>
+    implementation("org.apache.tomcat.embed:tomcat-embed-jasper")
+    //<dependency>
+    //    <groupId>jakarta.servlet.jsp.jstl</groupId>
+    //    <artifactId>jakarta.servlet.jsp.jstl-api</artifactId>
+    //    <version>3.0.0</version>
+    //</dependency>
+    //출처: https://islet4you.tistory.com/entry/SpringBoot-SpringBoot-30-에서-Jsp-Jstl-세팅-그리고-Servlet-변경점 [hoony's web study:티스토리]
+    implementation("jakarta.servlet.jsp.jstl:jakarta.servlet.jsp.jstl-api")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     runtimeOnly("com.h2database:h2")

@@ -3,7 +3,6 @@ package com.example.next.study.servlet
 import com.example.next.study.dao.UserDao
 import jakarta.servlet.ServletContextEvent
 import jakarta.servlet.ServletContextListener
-import jakarta.servlet.annotation.WebListener
 import jakarta.servlet.annotation.WebServlet
 import jakarta.servlet.http.HttpServlet
 import jakarta.servlet.http.HttpServletRequest
@@ -12,17 +11,23 @@ import org.springframework.core.io.ClassPathResource
 import org.springframework.jdbc.datasource.init.DatabasePopulatorUtils
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator
 
-@WebListener
-@WebServlet(name = "UsersListServlet", urlPatterns = ["/users/list"])
-class UsersListServlet : HttpServlet(), ServletContextListener {
+@WebServlet(name = "dispatcher", urlPatterns = ["/"], loadOnStartup = 1)
+class DispatcherServlet : HttpServlet(), ServletContextListener {
+
     override fun contextInitialized(sce: ServletContextEvent) {
         val resourceDatabasePopulator = ResourceDatabasePopulator()
         resourceDatabasePopulator.addScript(ClassPathResource("something.sql"))
         DatabasePopulatorUtils.execute(resourceDatabasePopulator, UserDao.dataSource)
     }
 
+    companion object {
+        @java.io.Serial
+        private const val serialVersionUID: Long = 0
+    }
+
     override fun doGet(req: HttpServletRequest, resp: HttpServletResponse) {
-        val users = UserDao.findAll()
+        val findAll = UserDao.findAll()
+
         resp.characterEncoding = "UTF-8"
         resp.contentType = "text/html;charset=UTF-8"
         val writer = resp.writer
@@ -43,7 +48,7 @@ class UsersListServlet : HttpServlet(), ServletContextListener {
                         </thead>
                         <tbody>
                             ${
-                users.joinToString("") { user ->
+                findAll.joinToString("") { user ->
                     "<tr><td>${user.userId}</td><td>${user.name}</td><td>${user.email}</td></tr>"
                 }
             }
@@ -53,10 +58,5 @@ class UsersListServlet : HttpServlet(), ServletContextListener {
             </html>
         """.trimIndent()
         )
-    }
-
-    companion object {
-        @java.io.Serial
-        private const val serialVersionUID: Long = 2958870642550870448L
     }
 }

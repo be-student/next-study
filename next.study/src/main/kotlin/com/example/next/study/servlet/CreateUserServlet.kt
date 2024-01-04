@@ -2,13 +2,12 @@ package com.example.next.study.servlet
 
 import com.example.next.study.dao.UserDao
 import com.example.next.study.domain.User
-import jakarta.servlet.annotation.WebServlet
 import jakarta.servlet.http.HttpServlet
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import java.io.Serial
 
-@WebServlet(name = "CreateUserServlet", urlPatterns = ["/users/create"])
+//@WebServlet(name = "CreateUserServlet", urlPatterns = ["/users/create"])
 class CreateUserServlet : HttpServlet() {
     override fun doPost(req: HttpServletRequest, resp: HttpServletResponse) {
         val userId = req.getParameter("userId")
