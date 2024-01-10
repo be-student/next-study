@@ -1,6 +1,8 @@
 package com.example.next.study.servlet
 
-import com.example.next.study.dao.UserDao
+import com.example.next.study.config.UserDataSourceConfig
+import com.example.next.study.dao.Template
+import com.example.next.study.dao.UserRMapper
 import jakarta.servlet.ServletContextEvent
 import jakarta.servlet.ServletContextListener
 import jakarta.servlet.annotation.WebServlet
@@ -12,12 +14,14 @@ import org.springframework.jdbc.datasource.init.DatabasePopulatorUtils
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator
 
 @WebServlet(name = "dispatcher", urlPatterns = ["/"], loadOnStartup = 1)
-class DispatcherServlet : HttpServlet(), ServletContextListener {
+class DispatcherServlet(
+    private val userTemplate: Template = UserDataSourceConfig.userTemplate
+) : HttpServlet(), ServletContextListener {
 
     override fun contextInitialized(sce: ServletContextEvent) {
         val resourceDatabasePopulator = ResourceDatabasePopulator()
         resourceDatabasePopulator.addScript(ClassPathResource("something.sql"))
-        DatabasePopulatorUtils.execute(resourceDatabasePopulator, UserDao.dataSource)
+        DatabasePopulatorUtils.execute(resourceDatabasePopulator, userTemplate.dataSource)
     }
 
     companion object {
@@ -26,7 +30,7 @@ class DispatcherServlet : HttpServlet(), ServletContextListener {
     }
 
     override fun doGet(req: HttpServletRequest, resp: HttpServletResponse) {
-        val findAll = UserDao.findAll()
+        val findAll = userTemplate.findAll("SELECT * FROM USERS", UserRMapper())
 
         resp.characterEncoding = "UTF-8"
         resp.contentType = "text/html;charset=UTF-8"
